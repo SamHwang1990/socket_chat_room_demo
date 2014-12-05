@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+    <title>Socket.IO chat</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font: 13px Helvetica, Arial; }
+        form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+        form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+        form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+        input#nick_name{border-bottom: 1px solid #ccc;}
+        #messages { list-style-type: none; margin: 0; padding: 0; }
+        #messages li { padding: 5px 10px; }
+        #messages li:nth-child(odd) { background: #eee; }
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+
+</head>
+<body>
+<ul id="messages"></ul>
+<form action="">
+    <input id="nick_name" type="text" placeholder="Nick Name" />
+    <input id="m" type="text" placeholder="Input you thought" autocomplete="off" />
+    <button>Send</button>
+</form>
+<script>
+    var socket = io();
+    var jquery_map = {
+        $form     : $('form'),
+        $nick_name: $('#nick_name'),
+        $msg_input: $('#m'),
+        $msg_list : $('#messages')
+    };
+    var append_msg_text;
+    var do_append_msg = function(msg){
+        jquery_map.$msg_list.append($('<li>').text(msg));
+    };
+
+    // region DOM Event Bind
+    $('form').submit(function(){
+        var msg_object = {
+            nick_name: jquery_map.$nick_name.val(),
+            message  : jquery_map.$msg_input.val()
+        };
+        socket.emit('chat message', msg_object);
+        jquery_map.$msg_input.val('');
+
+        append_msg_text = msg_object.nick_name + ": " + msg_object.message;
+        do_append_msg(append_msg_text);
+
+        return false;
+    });
+
+    jquery_map.$msg_input.keyup(function(){
+        var nick_name = jquery_map.$nick_name.val();
+        socket.emit('user_typing', nick_name);
+        return false;
+    });
+    //endregion
+
+    /* region Listen Socket Event  */
+    socket.on('chat message', function(msg){
+        append_msg_text = msg.nick_name + ": " + msg.message;
+        do_append_msg(append_msg_text);
+    });
+    socket.on('user_disconnect', function(msg){
+        do_append_msg(msg);
+    });
+    socket.on('user_connect', function(msg){
+        do_append_msg(msg);
+    });
+    socket.on('user_typing',function(msg){
+        append_msg_text = msg + ' is typing';
+        do_append_msg(append_msg_text);
+    });
+
+    /* endregion */
+</script>
+</body>
+</html>
